@@ -1,6 +1,6 @@
-use sigmaos_acceleration::Component;
+use sigmaos_acceleration::HardwareAcceleration;
 
 #[test]
 fn component_constructs() {
-    let _c = Component::new();
+    let _c = HardwareAcceleration::new("Test Acceleration");
 }
