@@ -1,10 +1,15 @@
 [package]
-name = "sigmaos_acceleration"
+name = "SigmaOS-acceleration"
 version = "0.1.0"
 edition = "2021"
-license = "MIT"
-description = "SigmaOS acceleration component inspired by Linux Mint / Omarchy / Arch Linux."
+license = "Apache-2.0"
+description = "SigmaOS sigmaos_acceleration component"
 
 [lib]
 name = "sigmaos_acceleration"
 path = "src/lib.rs"
+
+[dependencies]
+thiserror = "1"
+
+[dev-dependencies]

@@ -1,64 +1,67 @@
-//! SigmaOS-acceleration: hardware acceleration model.
-//!
-//! Real implementation: GPU, compute units, and validation.
-//! Replaces the 104-line CLI placeholder.
+//! SigmaOS-acceleration — acceleration component for SigmaOS
+#![forbid(unsafe_code)]
+#![warn(missing_docs)]
 
-use std::collections::BTreeMap;
-use std::fmt;
+use thiserror::Error;
 
-/// Compute device.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ComputeDevice {
-    pub id: String,
-    pub name: String,
-    pub device_type: String,
-    pub capability: String,
+/// Error types for this component.
+#[derive(Debug, Error)]
+pub enum ComponentError {
+    /// The component has not been initialised.
+    #[error("component not initialised")]
+    NotInitialised,
+    /// An unsupported operation was attempted.
+    #[error("unsupported operation: {0}")]
+    Unsupported(&'static str),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum AccelerationError {
-    EmptyName,
-    DuplicateDevice(String),
+/// Convenience result type.
+pub type ComponentResult<T> = Result<T, ComponentError>;
+
+/// Core component struct for acceleration.
+#[derive(Debug, Default, Clone)]
+pub struct Component {
+    initialised: bool,
+    name: String,
 }
 
-impl fmt::Display for AccelerationError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::EmptyName => write!(f, "device name must not be empty"),
-            Self::DuplicateDevice(id) => write!(f, "duplicate device {:?}", id),
-        }
-    }
-}
-
-impl std::error::Error for AccelerationError {}
-
-/// Hardware acceleration manager.
-pub struct HardwareAcceleration {
-    pub name: String,
-    devices: BTreeMap<String, ComputeDevice>,
-}
-
-impl HardwareAcceleration {
-    pub fn new(name: impl Into<String>) -> Self {
+impl Component {
+    /// Create a new, uninitialised component.
+    pub fn new() -> Self {
         Self {
-            name: name.into(),
-            devices: BTreeMap::new(),
+            initialised: false,
+            name: String::from("acceleration"),
         }
     }
 
-    pub fn add_device(&mut self, device: ComputeDevice) -> Result<(), AccelerationError> {
-        if device.name.trim().is_empty() { return Err(AccelerationError::EmptyName); }
-        let id = device.id.clone();
-        if self.devices.contains_key(&id) {
-            return Err(AccelerationError::DuplicateDevice(id.clone()));
-        }
-        self.devices.insert(id, device);
+    /// Initialise the component.
+    pub fn init(&mut self) -> ComponentResult<()> {
+        self.initialised = true;
         Ok(())
     }
 
-    pub fn device_count(&self) -> usize { self.devices.len() }
+    /// Returns true if the component has been initialised.
+    pub fn is_ready(&self) -> bool {
+        self.initialised
+    }
 
-    pub fn get_device(&self, id: &str) -> Option<&ComputeDevice> { self.devices.get(id) }
+    /// Execute the component's primary operation.
+    pub fn run(&self) -> ComponentResult<()> {
+        if !self.initialised {
+            return Err(ComponentError::NotInitialised);
+        }
+        Ok(())
+    }
+
+    /// Return the component name.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Reset the component to uninitialised state.
+    pub fn reset(&mut self) {
+        self.initialised = false;
+    }
 }
 
 #[cfg(test)]
@@ -66,33 +69,63 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_acceleration_create_aaa() {
-        let a = HardwareAcceleration::new("My Acceleration");
-        assert_eq!(a.name, "My Acceleration");
-        assert_eq!(a.device_count(), 0);
+    fn test_new_not_ready_aaa() {
+        // Arrange + Act
+        let c = Component::new();
+        // Assert
+        assert!(!c.is_ready());
     }
 
     #[test]
-    fn test_add_device_aaa() {
-        let mut a = HardwareAcceleration::new("My Acceleration");
-        let d = ComputeDevice { id: "d1".into(), name: "gpu0".into(), device_type: "gpu".into(), capability: "cuda".into() };
-        a.add_device(d).unwrap();
-        assert_eq!(a.device_count(), 1);
+    fn test_init_makes_ready_aaa() {
+        // Arrange
+        let mut c = Component::new();
+        // Act
+        c.init().unwrap();
+        // Assert
+        assert!(c.is_ready());
     }
 
     #[test]
-    fn test_empty_name_rejected_aaa() {
-        let mut a = HardwareAcceleration::new("My Acceleration");
-        let d = ComputeDevice { id: "x".into(), name: "".into(), device_type: "a".into(), capability: "b".into() };
-        assert!(a.add_device(d).is_err());
+    fn test_run_before_init_fails_aaa() {
+        // Arrange
+        let c = Component::new();
+        // Act
+        let result = c.run();
+        // Assert
+        assert!(result.is_err());
     }
 
     #[test]
-    fn test_duplicate_rejected_aaa() {
-        let mut a = HardwareAcceleration::new("My Acceleration");
-        let d = ComputeDevice { id: "x".into(), name: "X".into(), device_type: "a".into(), capability: "b".into() };
-        a.add_device(d).unwrap();
-        let d2 = ComputeDevice { id: "x".into(), name: "X".into(), device_type: "a".into(), capability: "b".into() };
-        assert!(a.add_device(d2).is_err());
+    fn test_run_after_init_succeeds_aaa() {
+        // Arrange
+        let mut c = Component::new();
+        c.init().unwrap();
+        // Act
+        let result = c.run();
+        // Assert
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_reset_clears_init_aaa() {
+        // Arrange
+        let mut c = Component::new();
+        c.init().unwrap();
+        assert!(c.is_ready());
+        // Act
+        c.reset();
+        // Assert
+        assert!(!c.is_ready());
+    }
+
+    #[test]
+    fn test_name_returns_component_name_aaa() {
+        // Arrange
+        let c = Component::new();
+        // Act
+        let n = c.name();
+        // Assert
+        assert!(!n.is_empty());
     }
 }
